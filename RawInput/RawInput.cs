@@ -86,7 +86,10 @@ namespace RawInput_dll
             {
                 case Win32.WM_INPUT:
                     {
-                        _keyboardDriver.ProcessRawInput(message.LParam);
+                        if (_keyboardDriver.ProcessRawInput(message.LParam))
+                        {
+                            return;
+                        }
                     }
                     break;
 

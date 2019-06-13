@@ -108,13 +108,13 @@ namespace RawInput_dll
 			throw new Win32Exception(Marshal.GetLastWin32Error());
 		}
 	   
-		public void ProcessRawInput(IntPtr hdevice)
+		public bool ProcessRawInput(IntPtr hdevice)
 		{
 			//Debug.WriteLine(_rawBuffer.data.keyboard.ToString());
 			//Debug.WriteLine(_rawBuffer.data.hid.ToString());
 			//Debug.WriteLine(_rawBuffer.header.ToString());
 
-			if (_deviceList.Count == 0) return;
+			if (_deviceList.Count == 0) return false;
 
 			var dwSize = 0;
 			Win32.GetRawInputData(hdevice, DataCommand.RID_INPUT, IntPtr.Zero, ref dwSize, Marshal.SizeOf(typeof(Rawinputheader)));
@@ -122,14 +122,14 @@ namespace RawInput_dll
 			if (dwSize != Win32.GetRawInputData(hdevice, DataCommand.RID_INPUT, out _rawBuffer, ref dwSize, Marshal.SizeOf(typeof (Rawinputheader))))
 			{
 				Debug.WriteLine("Error getting the rawinput buffer");
-				return;
+				return false;
 			}
 
 			int virtualKey = _rawBuffer.data.keyboard.VKey;
 			int makeCode = _rawBuffer.data.keyboard.Makecode;
 			int flags = _rawBuffer.data.keyboard.Flags;
 
-			if (virtualKey == Win32.KEYBOARD_OVERRUN_MAKE_CODE) return; 
+			if (virtualKey == Win32.KEYBOARD_OVERRUN_MAKE_CODE) return false; 
 			
 			var isE0BitSet = ((flags & Win32.RI_KEY_E0) != 0);
 
@@ -145,7 +145,7 @@ namespace RawInput_dll
 			else
 			{
 				Debug.WriteLine("Handle: {0} was not in the device list.", _rawBuffer.header.hDevice);
-				return;
+				return false;
 			}
 
 			var isBreakBitSet = ((flags & Win32.RI_KEY_BREAK) != 0);
@@ -158,8 +158,11 @@ namespace RawInput_dll
 			if (KeyPressed != null)
 			{
 				KeyPressed(this, new RawInputEventArg(keyPressEvent));
-			}
-		}
+                return keyPressEvent.Handled;
+            }
+
+            return false;
+        }
 
 		private static int VirtualKeyCorrection(int virtualKey, bool isE0BitSet, int makeCode)
 		{
